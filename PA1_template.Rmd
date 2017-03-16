@@ -1,25 +1,180 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+
 ---
 
 
 ## Loading and preprocessing the data
-
-
-
+```{r}
+  data <- read.csv("activity.csv", na.strings = "NA")
+  data$date <- as.Date(data$date)
+  head(data)
+```
 ## What is mean total number of steps taken per day?
-
-
-
+```{r warning=FALSE}
+  ### USE data.table AND ggplot2 PACKAGES
+    library(data.table)
+    library(ggplot2)
+```  
+```{r results='hide'} 
+  ### AGGREGATE THE TOTAL STEPS GROUPED BY DATE
+	  data <- data.table(data)
+  	data[, total_steps:=sum(steps, na.rm=TRUE), by=date]
+  	aggregate <- unique(data[,c('date','total_steps')])
+```
+```{r warning=FALSE, message = FALSE}
+  ### VIEW SAMPLE DATA
+    head(aggregate)
+  ### DRAW A BARPLOT
+    plot <- ggplot(data = aggregate, aes(x=date, y=total_steps)) 
+    plot <- plot + xlab("Date") + ylab("Total Number of Steps") + ggtitle("Number of Steps on Daily Basis") 
+    plot <- plot + geom_bar(stat='identity', width=0.75, position=position_dodge(0.7)) + geom_point()
+    plot <- plot + geom_smooth() + geom_line(lwd=1, col = "red3",cex=0.5)
+  ### ADD THEME
+    plot <- plot + theme(plot.title = element_text(color="#666666", face="bold", size=22)) 
+    plot <- plot + theme(axis.title = element_text(color="#666666", face="bold", size=17))     
+```
+```{r results='hide', echo = FALSE} 
+    plot
+    with(plot,dev.copy(png, 'plot1.png'))
+    dev.off()
+```
+```{r eval = FALSE} 
+  ### COPY PLOT TO PLOT1.PNG
+    with(plot,dev.copy(png, 'plot1.png'))
+  ### CLOSE THE GRAPHICS DEVICE
+    dev.off()
+```
+```{r results='hide'}
+  ### CALCULATE MEAN AND MEDIAN OF THE TOTAL NUMBER OF STEPS TAKEN EACH DAY
+    data[, mean:=mean(steps, na.rm = TRUE), by=date]
+    data[, median:=as.numeric(median(steps, na.rm = TRUE)), by=date]
+```
+```{r}
+  ### TAKE UNIQUE FOR DATE, TOTAL_STEPS, MEAN AND MEDIAN
+    summary <- unique(data[,c('date','total_steps','mean','median')])
+    summary
+```
 ## What is the average daily activity pattern?
-
-
-
+```{r results='hide'} 
+  ### AGGREGATE THE TOTAL STEPS GROUPED BY INTERVAL
+    data <- data.table(data)
+  	data[, total_steps_per_interval:=sum(steps, na.rm=TRUE), by=interval]
+  	aggregate_per_interval <- unique(data[,c('interval','total_steps_per_interval')])
+```
+```{r message = FALSE}
+  ### DRAW A TIME SERIES PLOT SPLITTED ACROSS VARIOUS INTERVALS
+    plot <- ggplot(data = aggregate_per_interval, aes(x=interval, y=total_steps_per_interval)) 
+    plot <- plot + xlab("Interval") + ylab("Total Number of Steps") + ggtitle("Number of Steps Grouped by Interval") 
+    plot <- plot + geom_line(color = "#FF0000")
+    plot <- plot + theme(plot.title = element_text(color="#666666", face="bold", size=22)) 
+    plot <- plot + theme(axis.title = element_text(color="#666666", face="bold", size=17))     
+```
+```{r results='hide', echo = FALSE} 
+    plot
+    with(plot,dev.copy(png, 'plot2.png'))
+    dev.off()
+```
+```{r eval = FALSE} 
+  ### COPY PLOT TO PLOT2.PNG
+    with(plot,dev.copy(png, 'plot2.png'))
+  ### CLOSE THE GRAPHICS DEVICE
+    dev.off()
+```
+```{r}
+  ### COMPUTE THE INTERVAL HAVING MAXIMUM NUMBER OF STEPS  
+    aggregate_per_interval[which.max(aggregate_per_interval$total_steps_per_interval)]
+```
 ## Imputing missing values
-
-
+### Imputed the NAs with the mean of total number of steps for the particular day. Kindly note that, nothing has been imputed for the days where there were no steps taken for any day
+```{r warning = FALSE}
+  ### CREATE A NEW DATA FRAME    
+    new_dataset <- data[,c('date', 'steps', 'interval','mean')]
+  ### GET THE TOTAL NUMBER OF RECORDS WITH "NA"
+    nrow(new_dataset[is.na(new_dataset$steps) == TRUE])
+  ### IMPUT "NA" WITH MEANS FOR THE PARTICULAR DAY (IGNORING NaN)
+    new_dataset$steps[is.na(new_dataset$steps)] <- new_dataset$mean
+  ### NUMBER OF RECORDS LEFT AS "NA" (DUE TO THE REASON "ZERO STEPS IN ENTIRE DAY")
+    nrow(new_dataset[is.na(new_dataset$steps) == TRUE])
+### AGGREGATE THE TOTAL STEPS IN NEW DATA SET GROUPED BY DATE
+    new_dataset <- data.table(new_dataset)
+  	new_dataset[, total_steps:=sum(steps, na.rm=TRUE), by=date]
+  	aggregate_new <- unique(new_dataset[,c('date','total_steps')])
+```
+```{r warning=FALSE, message = FALSE}
+  ### DRAW A BARPLOT
+    plot <- ggplot(data = aggregate_new, aes(x=date, y=total_steps)) 
+    plot <- plot + xlab("Date") + ylab("Total Number of Steps") + ggtitle("Number of Steps on Daily Basis (After Imputing) ") 
+    plot <- plot + geom_bar(stat='identity', width=0.75, position=position_dodge(0.7)) + geom_point()
+    plot <- plot + geom_smooth() + geom_line(lwd=1, col = "blue",cex=0.5)
+  ### ADD THEME
+    plot <- plot + theme(plot.title = element_text(color="#666666", face="bold", size=18)) 
+    plot <- plot + theme(axis.title = element_text(color="#666666", face="bold", size=15))     
+```
+```{r results='hide', echo = FALSE} 
+    plot
+    with(plot,dev.copy(png, 'plot3.png'))
+    dev.off()
+```
+```{r eval = FALSE} 
+  ### COPY PLOT TO PLOT3.PNG
+    with(plot,dev.copy(png, 'plot3.png'))
+  ### CLOSE THE GRAPHICS DEVICE
+    dev.off()  
+```
+```{r results='hide'}
+  ### CALCULATE MEAN AND MEDIAN OF THE TOTAL NUMBER OF STEPS TAKEN EACH DAY ON IMPUTED DATA SET
+    new_dataset[, mean:=mean(steps, na.rm = TRUE), by=date]
+    new_dataset[, median:=as.numeric(median(steps, na.rm = TRUE)), by=date]
+```
+```{r}
+  ### TAKE UNIQUE FOR DATE, TOTAL_STEPS, MEAN AND MEDIAN ON IMPUTED DATA SET
+    summary_new <- unique(new_dataset[,c('date','total_steps','mean','median')])
+    summary_new
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+  ### ADD A NEW FACTOR VARIABLE WEEKDAY TO THE NEW DATASET
+    new_dataset$weekday <- weekdays(new_dataset$date)
+    new_dataset$Type_of_Day[new_dataset$weekday == "Monday" 
+                        | new_dataset$weekday == "Tuesday" 
+                        | new_dataset$weekday == "Wednesday" 
+                        | new_dataset$weekday == "Thursday" 
+                        | new_dataset$weekday == "Friday"] <- "WEEKDAY"
+
+    new_dataset$Type_of_Day[new_dataset$weekday == "Saturday" 
+                        | new_dataset$weekday == "Sunday"] <- "WEEKEND"
+    new_dataset$Type_of_Day <- as.factor(new_dataset$Type_of_Day) 
+```
+```{r results='hide'} 
+  ### AGGREGATE THE TOTAL STEPS GROUPED BY WEEKDAY / WEEKEND
+    new_dataset <- data.table(new_dataset)
+    new_dataset[, total_steps_per_interval_type_of_day:=sum(steps, na.rm=TRUE), by=c('interval','Type_of_Day')]
+  	aggregate_per_interval_type_of_day <- unique(new_dataset[,c('interval','Type_of_Day','total_steps_per_interval_type_of_day')])
+```
+```{r message = FALSE}
+  ##SET THE NUMBER OF PLOTS
+    par(mfrow=c(1,1))
+  ### DRAW A TIME SERIES PLOT SPLITTED ACROSS VARIOUS INTERVALS
+    plot <- ggplot(data = aggregate_per_interval_type_of_day, aes(x=interval, y=total_steps_per_interval_type_of_day)) 
+    plot <- plot + xlab("Interval") + ylab("Total Number of Steps") + ggtitle("Number of Steps Grouped by Interval Across Type of Day") 
+    plot <- plot + geom_line(color = "#FF0000")
+    plot <- plot + facet_grid(Type_of_Day ~ .)
+    plot <- plot + theme(plot.title = element_text(color="#666666", face="bold", size=16)) 
+    plot <- plot + theme(axis.title = element_text(color="#666666", face="bold", size=14))     
+```
+```{r results='hide', echo = FALSE} 
+    plot
+    with(plot,dev.copy(png, 'plot4.png'))
+    dev.off()
+```
+```{r eval = FALSE} 
+  ### COPY PLOT TO PLOT4.PNG
+    with(plot,dev.copy(png, 'plot4.png'))
+  ### CLOSE THE GRAPHICS DEVICE
+    dev.off()
+```
+---
+title: "End of Peer Assessment 1"
+---
